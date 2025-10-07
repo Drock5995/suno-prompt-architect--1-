@@ -11,8 +11,8 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, isOpen, setIsOpen }) => {
   const navItems = [
-    { view: View.CREATE, label: 'Create New', icon: <CreateIcon /> },
     { view: View.LIBRARY, label: 'My Library', icon: <LibraryIcon /> },
+    { view: View.CREATE, label: 'Create New', icon: <CreateIcon /> },
     { view: View.UPLOAD, label: 'Upload Song', icon: <UploadIcon /> },
   ];
 

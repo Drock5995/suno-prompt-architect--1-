@@ -14,7 +14,7 @@ const App: React.FC = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoadingSession, setIsLoadingSession] = useState(true);
 
-  const [activeView, setActiveView] = useState<View>(View.CREATE);
+  const [activeView, setActiveView] = useState<View>(View.LIBRARY);
   const [songs, setSongs] = useState<Song[]>([]);
   const [isLoadingSongs, setIsLoadingSongs] = useState(true);
   const [currentSong, setCurrentSong] = useState<Song | null>(null);

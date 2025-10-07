@@ -1,7 +1,4 @@
-# TODO: Add Song Upload Feature
+# TODO: Change Default App Screen to Song Library
 
-- [x] Add UPLOAD to View enum in src/types.ts
-- [x] Update src/components/Sidebar.tsx to include UPLOAD nav item
-- [x] Create src/components/SongUploader.tsx component
-- [x] Update src/App.tsx to handle UPLOAD view and add handleUploadSong function
-- [x] Test the upload functionality
+- [x] Change initial activeView in src/App.tsx from View.CREATE to View.LIBRARY
+- [x] Reorder navItems in src/components/Sidebar.tsx to list LIBRARY first
