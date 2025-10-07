@@ -67,7 +67,8 @@ const App: React.FC = () => {
             artistStyle: s.artist_style,
             prompt: s.prompt,
             coverArtUrl: s.cover_art_url,
-            songUrl: s.song_url
+            songUrl: s.song_url,
+            secondarySongUrl: s.secondary_song_url
         }));
 
         setSongs(mappedSongs);
@@ -131,10 +132,10 @@ const App: React.FC = () => {
     setIsSidebarOpen(false);
   }, [session]);
 
-  const handleUploadSong = useCallback(async (data: { title: string; artistStyle: string; songFile: File; }) => {
+  const handleUploadSong = useCallback(async (data: { title: string; artistStyle: string; songFile: File; secondarySongFile?: File; }) => {
     if (!session?.user) throw new Error("User not authenticated.");
 
-    const { title, artistStyle, songFile } = data;
+    const { title, artistStyle, songFile, secondarySongFile } = data;
 
     const fileExt = songFile.name.split('.').pop();
     const filePath = `${session.user.id}/${crypto.randomUUID()}.${fileExt}`;
@@ -147,11 +148,30 @@ const App: React.FC = () => {
 
     const { data: urlData } = supabase.storage.from('songs').getPublicUrl(filePath);
 
+    let secondaryUrl: string | undefined;
+    if (secondarySongFile) {
+      const secondaryFileExt = secondarySongFile.name.split('.').pop();
+      const secondaryFilePath = `${session.user.id}/${crypto.randomUUID()}.${secondaryFileExt}`;
+
+      const { error: secondaryUploadError } = await supabase.storage
+        .from('songs')
+        .upload(secondaryFilePath, secondarySongFile, { contentType: secondarySongFile.type });
+
+      if (secondaryUploadError) {
+        await supabase.storage.from('songs').remove([filePath]);
+        throw secondaryUploadError;
+      }
+
+      const { data: secondaryUrlData } = supabase.storage.from('songs').getPublicUrl(secondaryFilePath);
+      secondaryUrl = secondaryUrlData.publicUrl;
+    }
+
     const newSongPayload = {
       title,
       artist_style: artistStyle,
       prompt: 'Uploaded song',
       song_url: urlData.publicUrl,
+      secondary_song_url: secondaryUrl,
       cover_art_url: `https://picsum.photos/seed/${crypto.randomUUID()}/400`,
       user_id: session.user.id,
     };
@@ -166,6 +186,10 @@ const App: React.FC = () => {
 
     if (insertError) {
       await supabase.storage.from('songs').remove([filePath]);
+      if (secondaryUrl) {
+        const secondaryPath = secondaryUrl.split('/').pop();
+        if (secondaryPath) await supabase.storage.from('songs').remove([`${session.user.id}/${secondaryPath}`]);
+      }
       throw insertError;
     }
 
@@ -175,7 +199,8 @@ const App: React.FC = () => {
       artistStyle: newSongData.artist_style,
       prompt: newSongData.prompt,
       coverArtUrl: newSongData.cover_art_url,
-      songUrl: newSongData.song_url
+      songUrl: newSongData.song_url,
+      secondarySongUrl: newSongData.secondary_song_url
     };
 
     setSongs(prevSongs => [finalNewSong, ...prevSongs]);
@@ -195,19 +220,43 @@ const App: React.FC = () => {
 
     if (deleteDbError) throw deleteDbError;
 
+    const filesToDelete: string[] = [];
+
     try {
         const url = new URL(songToDelete.songUrl);
         // Path is after /object/public/songs/
         const filePathWithBucket = url.pathname.substring(url.pathname.indexOf('/songs/') + 1);
         const filePath = filePathWithBucket.substring(filePathWithBucket.indexOf('/') + 1);
-        
+
         if (filePath) {
-            await supabase.storage.from('songs').remove([filePath]);
+            filesToDelete.push(filePath);
         }
     } catch(e) {
-        console.warn("Could not parse or delete song from storage, but DB entry was removed.", e);
+        console.warn("Could not parse primary song URL for deletion.", e);
     }
-    
+
+    if (songToDelete.secondarySongUrl) {
+      try {
+          const secondaryUrl = new URL(songToDelete.secondarySongUrl);
+          const secondaryFilePathWithBucket = secondaryUrl.pathname.substring(secondaryUrl.pathname.indexOf('/songs/') + 1);
+          const secondaryFilePath = secondaryFilePathWithBucket.substring(secondaryFilePathWithBucket.indexOf('/') + 1);
+
+          if (secondaryFilePath) {
+              filesToDelete.push(secondaryFilePath);
+          }
+      } catch(e) {
+          console.warn("Could not parse secondary song URL for deletion.", e);
+      }
+    }
+
+    if (filesToDelete.length > 0) {
+      try {
+        await supabase.storage.from('songs').remove(filesToDelete);
+      } catch(e) {
+        console.warn("Could not delete some files from storage, but DB entry was removed.", e);
+      }
+    }
+
     setSongs(prevSongs => prevSongs.filter(s => s.id !== songId));
     if (currentSong?.id === songId) {
         setCurrentSong(null);
@@ -233,6 +282,42 @@ const App: React.FC = () => {
   const handleToggleSettingsModal = () => {
     setIsSettingsModalOpen(prev => !prev);
   }
+
+  const handleSwapVersions = useCallback(async (songId: string) => {
+    if (!session?.user) return;
+
+    const song = songs.find(s => s.id === songId);
+    if (!song || !song.secondarySongUrl) return;
+
+    const newPrimary = song.secondarySongUrl;
+    const newSecondary = song.songUrl;
+
+    const { error } = await supabase
+      .from('songs')
+      .update({
+        song_url: newPrimary,
+        secondary_song_url: newSecondary
+      })
+      .eq('id', songId)
+      .eq('user_id', session.user.id);
+
+    if (error) {
+      console.error('Error swapping versions:', error);
+      alert('Failed to swap versions.');
+      return;
+    }
+
+    // Update local state
+    setSongs(prevSongs => prevSongs.map(s =>
+      s.id === songId
+        ? { ...s, songUrl: newPrimary, secondarySongUrl: newSecondary }
+        : s
+    ));
+
+    if (currentSong?.id === songId) {
+      setCurrentSong({ ...currentSong, songUrl: newPrimary, secondarySongUrl: newSecondary });
+    }
+  }, [session, songs, currentSong]);
 
   useEffect(() => {
     if (!audioRef.current) return;
@@ -297,11 +382,12 @@ const App: React.FC = () => {
         {isSidebarOpen && <div onClick={() => setIsSidebarOpen(false)} className="absolute inset-0 bg-black bg-opacity-50 z-10 md:hidden"></div>}
       </div>
       {currentSong && (
-        <Player 
-          song={currentSong} 
-          isPlaying={isPlaying} 
-          onTogglePlayPause={handleTogglePlayPause} 
+        <Player
+          song={currentSong}
+          isPlaying={isPlaying}
+          onTogglePlayPause={handleTogglePlayPause}
           audioRef={audioRef}
+          onSwapVersions={handleSwapVersions}
         />
       )}
       <SettingsModal isOpen={isSettingsModalOpen} onClose={handleToggleSettingsModal} />

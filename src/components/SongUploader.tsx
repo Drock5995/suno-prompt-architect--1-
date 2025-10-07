@@ -1,16 +1,18 @@
 import React, { useState, useRef } from 'react';
 
 interface SongUploaderProps {
-  onUploadSong: (data: { title: string; artistStyle: string; songFile: File; }) => Promise<void>;
+  onUploadSong: (data: { title: string; artistStyle: string; songFile: File; secondarySongFile?: File; }) => Promise<void>;
 }
 
 const SongUploader: React.FC<SongUploaderProps> = ({ onUploadSong }) => {
   const [title, setTitle] = useState('');
   const [artistStyle, setArtistStyle] = useState('');
   const [songFile, setSongFile] = useState<File | null>(null);
+  const [secondarySongFile, setSecondarySongFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const secondaryFileInputRef = useRef<HTMLInputElement>(null);
 
   const handleUpload = async () => {
     if (!title || !artistStyle || !songFile) {
@@ -24,13 +26,18 @@ const SongUploader: React.FC<SongUploaderProps> = ({ onUploadSong }) => {
         title,
         artistStyle,
         songFile,
+        secondarySongFile: secondarySongFile || undefined,
       });
       // Reset form on successful upload
       setTitle('');
       setArtistStyle('');
       setSongFile(null);
+      setSecondarySongFile(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
+      }
+      if (secondaryFileInputRef.current) {
+        secondaryFileInputRef.current.value = '';
       }
     } catch (error) {
       console.error("Failed to upload song:", error);
@@ -68,13 +75,24 @@ const SongUploader: React.FC<SongUploaderProps> = ({ onUploadSong }) => {
           />
         </div>
         <div>
-          <label htmlFor="songFile" className="block text-sm font-medium text-spotify-gray-100">Select Audio File</label>
+          <label htmlFor="songFile" className="block text-sm font-medium text-spotify-gray-100">Select Primary Audio File</label>
           <input
             id="songFile"
             ref={fileInputRef}
             type="file"
             accept="audio/mpeg,audio/wav,audio/ogg"
             onChange={(e) => setSongFile(e.target.files ? e.target.files[0] : null)}
+            className="w-full mt-1 text-sm text-spotify-gray-100 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-spotify-gray-200 file:text-white hover:file:bg-spotify-gray-300 transition-colors"
+          />
+        </div>
+        <div>
+          <label htmlFor="secondarySongFile" className="block text-sm font-medium text-spotify-gray-100">Select Secondary Audio File (Optional)</label>
+          <input
+            id="secondarySongFile"
+            ref={secondaryFileInputRef}
+            type="file"
+            accept="audio/mpeg,audio/wav,audio/ogg"
+            onChange={(e) => setSecondarySongFile(e.target.files ? e.target.files[0] : null)}
             className="w-full mt-1 text-sm text-spotify-gray-100 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-spotify-gray-200 file:text-white hover:file:bg-spotify-gray-300 transition-colors"
           />
         </div>

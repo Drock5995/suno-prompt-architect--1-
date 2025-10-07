@@ -7,6 +7,7 @@ export interface Song {
   prompt: string;
   coverArtUrl: string;
   songUrl: string;
+  secondarySongUrl?: string;
 }
 
 export enum View {

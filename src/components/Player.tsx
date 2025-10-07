@@ -7,6 +7,7 @@ interface PlayerProps {
   isPlaying: boolean;
   onTogglePlayPause: () => void;
   audioRef: React.RefObject<HTMLAudioElement>;
+  onSwapVersions: (songId: string) => void;
 }
 
 const formatTime = (time: number) => {
@@ -16,10 +17,11 @@ const formatTime = (time: number) => {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
 
-const Player: React.FC<PlayerProps> = ({ song, isPlaying, onTogglePlayPause, audioRef }) => {
+const Player: React.FC<PlayerProps> = ({ song, isPlaying, onTogglePlayPause, audioRef, onSwapVersions }) => {
     const [progress, setProgress] = useState(0);
     const [duration, setDuration] = useState(0);
     const [currentTime, setCurrentTime] = useState(0);
+    const [currentVersion, setCurrentVersion] = useState<'primary' | 'secondary'>('primary');
 
     useEffect(() => {
         const audio = audioRef.current;
@@ -56,7 +58,7 @@ const Player: React.FC<PlayerProps> = ({ song, isPlaying, onTogglePlayPause, aud
 
   return (
     <footer className="bg-spotify-gray-400 h-[90px] p-2 sm:p-4 flex items-center justify-between border-t border-spotify-gray-300">
-      <audio ref={audioRef} src={song.songUrl} key={song.id} onEnded={onTogglePlayPause} />
+      <audio ref={audioRef} src={currentVersion === 'primary' ? song.songUrl : song.secondarySongUrl || song.songUrl} key={`${song.id}-${currentVersion}`} onEnded={onTogglePlayPause} />
       <div className="flex items-center space-x-2 sm:space-x-4 w-1/3 sm:w-1/4">
         <img src={song.coverArtUrl} alt={song.title} className="w-10 h-10 sm:w-14 sm:h-14 rounded-md flex-shrink-0" />
         <div className="overflow-hidden">
@@ -66,9 +68,29 @@ const Player: React.FC<PlayerProps> = ({ song, isPlaying, onTogglePlayPause, aud
       </div>
       
       <div className="flex flex-col items-center justify-center flex-grow max-w-2xl px-2">
-        <button onClick={onTogglePlayPause} className="bg-white text-black rounded-full p-2 hover:scale-105 transition-transform">
-          {isPlaying ? <PauseIcon size={28} /> : <PlayIcon size={28} />}
-        </button>
+        <div className="flex items-center space-x-2">
+          <button onClick={onTogglePlayPause} className="bg-white text-black rounded-full p-2 hover:scale-105 transition-transform">
+            {isPlaying ? <PauseIcon size={28} /> : <PlayIcon size={28} />}
+          </button>
+          {song.secondarySongUrl && (
+            <>
+              <button
+                onClick={() => setCurrentVersion(currentVersion === 'primary' ? 'secondary' : 'primary')}
+                className="bg-spotify-gray-300 text-white rounded-full p-2 hover:bg-spotify-gray-200 transition-colors"
+                title={`Switch to ${currentVersion === 'primary' ? 'Secondary' : 'Primary'} Version`}
+              >
+                {currentVersion === 'primary' ? '2' : '1'}
+              </button>
+              <button
+                onClick={() => onSwapVersions(song.id)}
+                className="bg-spotify-gray-300 text-white rounded-full p-2 hover:bg-spotify-gray-200 transition-colors"
+                title="Swap Primary and Secondary Versions"
+              >
+                ⇅
+              </button>
+            </>
+          )}
+        </div>
         <div className="w-full flex items-center space-x-2 mt-2">
             <span className="text-xs text-spotify-gray-100 w-8 text-center">{formatTime(currentTime)}</span>
             <input 
