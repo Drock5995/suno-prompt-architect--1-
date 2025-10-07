@@ -1,4 +1,4 @@
-const SUNO_API_BASE_URL = 'https://sunoapi.org/api/v1';
+
 
 const getApiKey = () => {
   return localStorage.getItem('suno_api_key');

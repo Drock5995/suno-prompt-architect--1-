@@ -44,6 +44,9 @@ Create a detailed prompt that includes:
       }
     });
     
+    if (!response.text) {
+      throw new Error("No text in Gemini response");
+    }
     // Enforce the character limit on the client side as a failsafe.
     return response.text.trim().substring(0, 1000);
   } catch (error) {
@@ -87,6 +90,9 @@ Based on this, write a complete song with two verses, a chorus, and a bridge tha
       },
     });
 
+    if (!response.text) {
+      throw new Error("No text in Gemini response");
+    }
     return response.text.trim();
   } catch (error) {
     console.error("Error generating lyrics with Gemini:", error);
