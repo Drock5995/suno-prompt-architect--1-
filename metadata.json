@@ -1,0 +1,5 @@
+{
+  "name": "Suno Prompt Architect",
+  "description": "An application to assist in engineering prompts for AI music generation, enabling users to create music with a consistent artist style, save their creations, and stream them within a Spotify-like interface.",
+  "requestFramePermissions": []
+}
