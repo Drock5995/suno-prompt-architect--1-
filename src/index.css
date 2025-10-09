@@ -1,3 +1,22 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.green-s {
+  width: 250.75px!important; /* slightly larger than text height */
+  height: 27.75rem !important;
+  margin-right: -85.75px !important; /* equal spacing */
+  margin-bottom: -0px;
+  padding-bottom: 5px; 
+  margin-left: -85px;
+  vertical-align: middle;
+  display: inline-block;
+}
+
+.logo-text-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: -85px;
+  margin-top: -90px;
+}

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Song, View, Session } from './types';
+import { Song, View, PublicView, Session } from './types';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import PromptGenerator from './components/PromptGenerator';
@@ -17,26 +17,34 @@ const App: React.FC = () => {
   const [showLogin, setShowLogin] = useState(false);
 
   const [activeView, setActiveView] = useState<View>(View.LIBRARY);
+  const [publicView, setPublicView] = useState<PublicView>(PublicView.HOME);
   const [songs, setSongs] = useState<Song[]>([]);
   const [isLoadingSongs, setIsLoadingSongs] = useState(true);
   const [publicSongs, setPublicSongs] = useState<Song[]>([]);
-  const [isLoadingPublicSongs, setIsLoadingPublicSongs] = useState(true);
+  const [, setIsLoadingPublicSongs] = useState(true);
   const [currentSong, setCurrentSong] = useState<Song | null>(null);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
+  const [isAdminPublicMode, setIsAdminPublicMode] = useState<boolean>(false);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
     const getSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
+      if (session) {
+        setShowLogin(false);
+      }
       setIsLoadingSession(false);
     };
     getSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      if (session) {
+        setShowLogin(false);
+      }
       if (_event === 'SIGNED_OUT') {
         setSongs([]);
         setCurrentSong(null);
@@ -54,7 +62,7 @@ const App: React.FC = () => {
       try {
         const { data, error } = await supabase
           .from('songs')
-          .select('*')
+          .select('*, lyric_video_url, music_video_url')
           .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -66,7 +74,9 @@ const App: React.FC = () => {
             prompt: s.prompt,
             coverArtUrl: s.cover_art_url,
             songUrl: s.song_url,
-            secondarySongUrl: s.secondary_song_url
+            secondarySongUrl: s.secondary_song_url,
+            lyricVideoUrl: s.lyric_video_url,
+            musicVideoUrl: s.music_video_url
         }));
 
         setPublicSongs(mappedSongs);
@@ -90,7 +100,7 @@ const App: React.FC = () => {
       try {
         const { data, error } = await supabase
           .from('songs')
-          .select('*')
+          .select('*, lyric_video_url, music_video_url')
           .eq('user_id', session.user.id)
           .order('created_at', { ascending: false });
 
@@ -103,7 +113,9 @@ const App: React.FC = () => {
             prompt: s.prompt,
             coverArtUrl: s.cover_art_url,
             songUrl: s.song_url,
-            secondarySongUrl: s.secondary_song_url
+            secondarySongUrl: s.secondary_song_url,
+            lyricVideoUrl: s.lyric_video_url,
+            musicVideoUrl: s.music_video_url
         }));
 
         setSongs(mappedSongs);
@@ -309,6 +321,29 @@ const App: React.FC = () => {
   }, [currentSong]);
 
   const handleTogglePlayPause = useCallback(() => setIsPlaying(prev => !prev), []);
+
+  const handleNextSong = useCallback(() => {
+    if (!currentSong) return;
+    const currentSongs = session && !isAdminPublicMode ? songs : publicSongs;
+    const currentIndex = currentSongs.findIndex(s => s.id === currentSong.id);
+    if (currentIndex < currentSongs.length - 1) {
+      const nextSong = currentSongs[currentIndex + 1];
+      setCurrentSong(nextSong);
+      setIsPlaying(true);
+    }
+  }, [currentSong, songs, publicSongs, session, isAdminPublicMode]);
+
+  const handlePreviousSong = useCallback(() => {
+    if (!currentSong) return;
+    const currentSongs = session && !isAdminPublicMode ? songs : publicSongs;
+    const currentIndex = currentSongs.findIndex(s => s.id === currentSong.id);
+    if (currentIndex > 0) {
+      const prevSong = currentSongs[currentIndex - 1];
+      setCurrentSong(prevSong);
+      setIsPlaying(true);
+    }
+  }, [currentSong, songs, publicSongs, session, isAdminPublicMode]);
+
   const handleViewChange = (view: View) => {
     setActiveView(view);
     setIsSidebarOpen(false);
@@ -318,41 +353,10 @@ const App: React.FC = () => {
     setIsSettingsModalOpen(prev => !prev);
   }
 
-  const handleSwapVersions = useCallback(async (songId: string) => {
-    if (!session?.user) return;
+  const handleToggleAdminPublicMode = () => {
+    setIsAdminPublicMode(prev => !prev);
+  }
 
-    const song = songs.find(s => s.id === songId);
-    if (!song || !song.secondarySongUrl) return;
-
-    const newPrimary = song.secondarySongUrl;
-    const newSecondary = song.songUrl;
-
-    const { error } = await supabase
-      .from('songs')
-      .update({
-        song_url: newPrimary,
-        secondary_song_url: newSecondary
-      })
-      .eq('id', songId)
-      .eq('user_id', session.user.id);
-
-    if (error) {
-      console.error('Error swapping versions:', error);
-      alert('Failed to swap versions.');
-      return;
-    }
-
-    // Update local state
-    setSongs(prevSongs => prevSongs.map(s =>
-      s.id === songId
-        ? { ...s, songUrl: newPrimary, secondarySongUrl: newSecondary }
-        : s
-    ));
-
-    if (currentSong?.id === songId) {
-      setCurrentSong({ ...currentSong, songUrl: newPrimary, secondarySongUrl: newSecondary });
-    }
-  }, [session, songs, currentSong]);
 
   useEffect(() => {
     if (!audioRef.current) return;
@@ -364,6 +368,20 @@ const App: React.FC = () => {
   }, [isPlaying, currentSong]);
 
   const renderContent = () => {
+    if (isAdminPublicMode) {
+      return (
+        <PublicLibrary
+          songs={publicSongs}
+          onSelectSong={handleSelectSong}
+          currentSong={currentSong}
+          isPlaying={isPlaying}
+          onLogin={handleToggleAdminPublicMode}
+          publicView={publicView}
+          onPublicViewChange={setPublicView}
+          loginButtonText="Back to Admin"
+        />
+      );
+    }
     if (activeView === View.CREATE) {
       return <PromptGenerator onSaveSong={handleSaveSong} />;
     }
@@ -407,20 +425,27 @@ const App: React.FC = () => {
   if (!session) {
     return (
       <div className="h-screen w-screen flex flex-col bg-app-bg overflow-hidden">
-        <PublicLibrary
-          songs={publicSongs}
-          onSelectSong={handleSelectSong}
-          currentSong={currentSong}
-          isPlaying={isPlaying}
-          onLogin={() => setShowLogin(true)}
-        />
+        <div className="flex-1 overflow-y-auto">
+          <PublicLibrary
+            songs={publicSongs}
+            onSelectSong={handleSelectSong}
+            currentSong={currentSong}
+            isPlaying={isPlaying}
+            onLogin={() => setShowLogin(true)}
+            publicView={publicView}
+            onPublicViewChange={setPublicView}
+          />
+        </div>
         {currentSong && (
           <Player
             song={currentSong}
             isPlaying={isPlaying}
             onTogglePlayPause={handleTogglePlayPause}
             audioRef={audioRef}
-            onSwapVersions={handleSwapVersions}
+            onNextSong={handleNextSong}
+            onPreviousSong={handlePreviousSong}
+            hasNextSong={publicSongs.findIndex(s => s.id === currentSong.id) < publicSongs.length - 1}
+            hasPreviousSong={publicSongs.findIndex(s => s.id === currentSong.id) > 0}
           />
         )}
       </div>
@@ -432,7 +457,7 @@ const App: React.FC = () => {
       <div className="flex flex-grow h-[calc(100vh-90px)] relative">
         <Sidebar activeView={activeView} setActiveView={handleViewChange} isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
         <div className="flex-1 flex flex-col min-w-0">
-            <Header onMenuClick={() => setIsSidebarOpen(true)} onSettingsClick={handleToggleSettingsModal} session={session} />
+            <Header onMenuClick={() => setIsSidebarOpen(true)} onSettingsClick={handleToggleSettingsModal} session={session} onTogglePublicMode={handleToggleAdminPublicMode} isAdminPublicMode={isAdminPublicMode} />
             <main className="flex-1 bg-spotify-gray-500 overflow-y-auto">
               {renderContent()}
             </main>
@@ -445,7 +470,10 @@ const App: React.FC = () => {
           isPlaying={isPlaying}
           onTogglePlayPause={handleTogglePlayPause}
           audioRef={audioRef}
-          onSwapVersions={handleSwapVersions}
+          onNextSong={handleNextSong}
+          onPreviousSong={handlePreviousSong}
+          hasNextSong={(isAdminPublicMode ? publicSongs : songs).findIndex(s => s.id === currentSong.id) < (isAdminPublicMode ? publicSongs : songs).length - 1}
+          hasPreviousSong={(isAdminPublicMode ? publicSongs : songs).findIndex(s => s.id === currentSong.id) > 0}
         />
       )}
       <SettingsModal isOpen={isSettingsModalOpen} onClose={handleToggleSettingsModal} />

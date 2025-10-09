@@ -7,7 +7,10 @@ interface PlayerProps {
   isPlaying: boolean;
   onTogglePlayPause: () => void;
   audioRef: React.RefObject<HTMLAudioElement>;
-  onSwapVersions: (songId: string) => void;
+  onNextSong?: () => void;
+  onPreviousSong?: () => void;
+  hasNextSong?: boolean;
+  hasPreviousSong?: boolean;
 }
 
 const formatTime = (time: number) => {
@@ -17,7 +20,7 @@ const formatTime = (time: number) => {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
 
-const Player: React.FC<PlayerProps> = ({ song, isPlaying, onTogglePlayPause, audioRef, onSwapVersions }) => {
+const Player: React.FC<PlayerProps> = ({ song, isPlaying, onTogglePlayPause, audioRef, onNextSong, onPreviousSong, hasNextSong, hasPreviousSong }) => {
     const [progress, setProgress] = useState(0);
     const [duration, setDuration] = useState(0);
     const [currentTime, setCurrentTime] = useState(0);
@@ -107,6 +110,17 @@ const Player: React.FC<PlayerProps> = ({ song, isPlaying, onTogglePlayPause, aud
           <p className="text-xs sm:text-sm text-spotify-gray-100 truncate">{song.artistStyle}</p>
         </div>
       </div>
+      <div className="flex items-center space-x-2">
+        <button
+          onClick={onPreviousSong}
+          disabled={!hasPreviousSong}
+          aria-label="Previous song"
+          className="text-spotify-gray-100 hover:text-white transition-colors duration-200 hover:scale-110 p-1 disabled:opacity-50 disabled:cursor-not-allowed"
+          title="Previous Song"
+        >
+          <SkipBackIcon size={20} />
+        </button>
+      </div>
 
       <div className="flex flex-col items-center justify-center flex-grow max-w-2xl px-2">
         <div className="flex items-center space-x-2 mb-2">
@@ -119,23 +133,23 @@ const Player: React.FC<PlayerProps> = ({ song, isPlaying, onTogglePlayPause, aud
           <button onClick={skipForward} className="text-spotify-gray-100 hover:text-white transition-colors duration-200 hover:scale-110 p-1" aria-label="Skip forward 10 seconds">
             <SkipForwardIcon size={20} />
           </button>
+          <button
+            onClick={onNextSong}
+            disabled={!hasNextSong}
+            aria-label="Next song"
+            className="text-spotify-gray-100 hover:text-white transition-colors duration-200 hover:scale-110 p-1 disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Next Song"
+          >
+            <SkipForwardIcon size={20} />
+          </button>
           {song.secondarySongUrl && (
-            <>
-              <button
-                onClick={() => setCurrentVersion(currentVersion === 'primary' ? 'secondary' : 'primary')}
-                className="bg-spotify-gray-300 text-white rounded-full p-2 hover:bg-spotify-gray-200 transition-all duration-200 hover:scale-105"
-                title={`Switch to ${currentVersion === 'primary' ? 'Secondary' : 'Primary'} Version`}
-              >
-                {currentVersion === 'primary' ? '2' : '1'}
-              </button>
-              <button
-                onClick={() => onSwapVersions(song.id)}
-                className="bg-spotify-gray-300 text-white rounded-full p-2 hover:bg-spotify-gray-200 transition-all duration-200 hover:scale-105"
-                title="Swap Primary and Secondary Versions"
-              >
-                ⇅
-              </button>
-            </>
+            <button
+              onClick={() => setCurrentVersion(currentVersion === 'primary' ? 'secondary' : 'primary')}
+              className="bg-spotify-gray-300 text-white rounded-full p-2 hover:bg-spotify-gray-200 transition-all duration-200 hover:scale-105"
+              title={`Switch to ${currentVersion === 'primary' ? 'Secondary' : 'Primary'} Version`}
+            >
+              {currentVersion === 'primary' ? '2' : '1'}
+            </button>
           )}
         </div>
         <div className="w-full flex items-center space-x-2">
