@@ -8,15 +8,19 @@ import SongUploader from './components/SongUploader';
 import Player from './components/Player';
 import Auth from './components/Auth';
 import SettingsModal from './components/SettingsModal';
+import PublicLibrary from './components/PublicLibrary';
 import { supabase } from './services/supabaseClient';
 
 const App: React.FC = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoadingSession, setIsLoadingSession] = useState(true);
+  const [showLogin, setShowLogin] = useState(false);
 
   const [activeView, setActiveView] = useState<View>(View.LIBRARY);
   const [songs, setSongs] = useState<Song[]>([]);
   const [isLoadingSongs, setIsLoadingSongs] = useState(true);
+  const [publicSongs, setPublicSongs] = useState<Song[]>([]);
+  const [isLoadingPublicSongs, setIsLoadingPublicSongs] = useState(true);
   const [currentSong, setCurrentSong] = useState<Song | null>(null);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
@@ -45,6 +49,37 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    const fetchPublicSongs = async () => {
+      setIsLoadingPublicSongs(true);
+      try {
+        const { data, error } = await supabase
+          .from('songs')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        const mappedSongs: Song[] = (data || []).map(s => ({
+            id: s.id,
+            title: s.title,
+            artistStyle: s.artist_style,
+            prompt: s.prompt,
+            coverArtUrl: s.cover_art_url,
+            songUrl: s.song_url,
+            secondarySongUrl: s.secondary_song_url
+        }));
+
+        setPublicSongs(mappedSongs);
+      } catch (error) {
+        console.error("Error fetching public songs:", error);
+      } finally {
+        setIsLoadingPublicSongs(false);
+      }
+    };
+    fetchPublicSongs();
+  }, []);
+
+  useEffect(() => {
     if (!session?.user) {
       setIsLoadingSongs(false);
       return;
@@ -58,7 +93,7 @@ const App: React.FC = () => {
           .select('*')
           .eq('user_id', session.user.id)
           .order('created_at', { ascending: false });
-        
+
         if (error) throw error;
 
         const mappedSongs: Song[] = (data || []).map(s => ({
@@ -359,18 +394,41 @@ const App: React.FC = () => {
 
   if (isLoadingSession) {
     return (
-        <div className="h-screen w-screen flex items-center justify-center bg-black">
+        <div className="h-screen w-screen flex items-center justify-center bg-app-bg animate-fade-in">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-spotify-green"></div>
         </div>
     );
   }
 
-  if (!session) {
+  if (showLogin) {
     return <Auth />;
   }
 
+  if (!session) {
+    return (
+      <div className="h-screen w-screen flex flex-col bg-app-bg overflow-hidden">
+        <PublicLibrary
+          songs={publicSongs}
+          onSelectSong={handleSelectSong}
+          currentSong={currentSong}
+          isPlaying={isPlaying}
+          onLogin={() => setShowLogin(true)}
+        />
+        {currentSong && (
+          <Player
+            song={currentSong}
+            isPlaying={isPlaying}
+            onTogglePlayPause={handleTogglePlayPause}
+            audioRef={audioRef}
+            onSwapVersions={handleSwapVersions}
+          />
+        )}
+      </div>
+    );
+  }
+
   return (
-    <div className="h-screen w-screen text-spotify-gray-100 font-sans flex flex-col bg-black overflow-hidden">
+    <div className="h-screen w-screen text-spotify-gray-100 font-sans flex flex-col bg-app-bg overflow-hidden animate-fade-in">
       <div className="flex flex-grow h-[calc(100vh-90px)] relative">
         <Sidebar activeView={activeView} setActiveView={handleViewChange} isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
         <div className="flex-1 flex flex-col min-w-0">

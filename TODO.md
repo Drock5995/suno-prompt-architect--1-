@@ -1,10 +1,19 @@
-# TODO: Add Support for Secondary Song Versions
+# TODO: Transform to Admin Panel + Public Streaming App
 
-- [x] Update Song type to include secondarySongUrl
-- [x] Update SongUploader to accept secondary file input
-- [x] Update handleUploadSong to upload and save secondary file
-- [x] Update fetchSongs to include secondarySongUrl
-- [x] Update Player to switch between primary and secondary versions
-- [x] Add swap versions functionality
-- [x] Update handleDeleteSong to delete secondary file
-- [ ] Add secondary_song_url column to Supabase songs table
+## Completed
+- [x] Analyze current codebase
+- [x] Create implementation plan
+- [x] Get user approval
+- [x] Modify types.ts (not needed)
+- [x] Create PublicLibrary component
+- [x] Modify SongLibrary for public mode
+- [x] Update App.tsx for public/admin rendering
+
+## In Progress
+- [x] Add batch generation feature
+- [x] Enhance UI design
+- [ ] Test public access and admin login
+
+## Pending
+- [ ] Add search/filter in public library
+- [ ] Deploy and verify

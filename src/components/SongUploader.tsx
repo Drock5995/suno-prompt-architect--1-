@@ -1,4 +1,5 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
+import { UploadIcon } from './icons/Icons';
 
 interface SongUploaderProps {
   onUploadSong: (data: { title: string; artistStyle: string; songFile: File; secondarySongFile?: File; }) => Promise<void>;
@@ -10,9 +11,63 @@ const SongUploader: React.FC<SongUploaderProps> = ({ onUploadSong }) => {
   const [songFile, setSongFile] = useState<File | null>(null);
   const [secondarySongFile, setSecondarySongFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState('');
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [isSecondaryDragOver, setIsSecondaryDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const secondaryFileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleDragOver = useCallback((e: React.DragEvent, isSecondary: boolean = false) => {
+    e.preventDefault();
+    if (isSecondary) {
+      setIsSecondaryDragOver(true);
+    } else {
+      setIsDragOver(true);
+    }
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent, isSecondary: boolean = false) => {
+    e.preventDefault();
+    if (isSecondary) {
+      setIsSecondaryDragOver(false);
+    } else {
+      setIsDragOver(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent, isSecondary: boolean = false) => {
+    e.preventDefault();
+    if (isSecondary) {
+      setIsSecondaryDragOver(false);
+    } else {
+      setIsDragOver(false);
+    }
+
+    const files = Array.from(e.dataTransfer.files);
+    const audioFile = files.find(file => file.type.startsWith('audio/'));
+
+    if (audioFile) {
+      if (isSecondary) {
+        setSecondarySongFile(audioFile);
+      } else {
+        setSongFile(audioFile);
+      }
+    } else {
+      setError('Please drop an audio file (MP3, WAV, or OGG).');
+    }
+  }, []);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, isSecondary: boolean = false) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (isSecondary) {
+        setSecondarySongFile(file);
+      } else {
+        setSongFile(file);
+      }
+    }
+  };
 
   const handleUpload = async () => {
     if (!title || !artistStyle || !songFile) {
@@ -21,6 +76,19 @@ const SongUploader: React.FC<SongUploaderProps> = ({ onUploadSong }) => {
     }
     setError('');
     setIsUploading(true);
+    setUploadProgress(0);
+
+    // Simulate upload progress
+    const progressInterval = setInterval(() => {
+      setUploadProgress(prev => {
+        if (prev >= 90) {
+          clearInterval(progressInterval);
+          return prev;
+        }
+        return prev + 10;
+      });
+    }, 200);
+
     try {
       await onUploadSong({
         title,
@@ -28,6 +96,7 @@ const SongUploader: React.FC<SongUploaderProps> = ({ onUploadSong }) => {
         songFile,
         secondarySongFile: secondarySongFile || undefined,
       });
+      setUploadProgress(100);
       // Reset form on successful upload
       setTitle('');
       setArtistStyle('');
@@ -44,62 +113,129 @@ const SongUploader: React.FC<SongUploaderProps> = ({ onUploadSong }) => {
       alert("Failed to upload song. Please check the console for more details.");
     } finally {
       setIsUploading(false);
+      setUploadProgress(0);
+      clearInterval(progressInterval);
     }
   };
 
-  return (
-    <div className="p-4 sm:p-8 text-white space-y-6 sm:space-y-8 h-full">
-      <h2 className="text-3xl sm:text-4xl font-bold">Upload Your Song</h2>
+  const FileDropZone: React.FC<{
+    file: File | null;
+    onDrop: (e: React.DragEvent) => void;
+    onDragOver: (e: React.DragEvent) => void;
+    onDragLeave: (e: React.DragEvent) => void;
+    inputRef: React.RefObject<HTMLInputElement>;
+    onFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    label: string;
+    isDragOver: boolean;
+  }> = ({ file, onDrop, onDragOver, onDragLeave, inputRef, onFileSelect, label, isDragOver }) => (
+    <div
+      className={`border-2 border-dashed rounded-lg p-6 text-center transition-all duration-300 cursor-pointer ${
+        isDragOver
+          ? 'border-spotify-green bg-spotify-green/10 scale-105'
+          : file
+          ? 'border-spotify-green bg-spotify-gray-300'
+          : 'border-spotify-gray-200 bg-spotify-gray-300 hover:border-spotify-gray-100'
+      }`}
+      onDrop={onDrop}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onClick={() => inputRef.current?.click()}
+    >
+      <input
+        ref={inputRef}
+        type="file"
+        accept="audio/mpeg,audio/wav,audio/ogg"
+        onChange={onFileSelect}
+        className="hidden"
+      />
+      <UploadIcon className={`mx-auto mb-2 ${isDragOver ? 'text-spotify-green' : 'text-spotify-gray-100'}`} size={32} />
+      {file ? (
+        <div>
+          <p className="text-spotify-green font-semibold">{file.name}</p>
+          <p className="text-sm text-spotify-gray-100">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+        </div>
+      ) : (
+        <div>
+          <p className="text-spotify-gray-100 font-medium">{label}</p>
+          <p className="text-sm text-spotify-gray-200">Drop your file here or click to browse</p>
+        </div>
+      )}
+    </div>
+  );
 
-      <div className="bg-spotify-gray-400 p-4 sm:p-6 rounded-lg space-y-4 max-w-md mx-auto">
-        <div>
-          <label htmlFor="title" className="block text-sm font-medium text-spotify-gray-100">Song Title</label>
-          <input
-            id="title"
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Enter the title of your song"
-            className="w-full mt-1 p-2 bg-spotify-gray-300 border border-spotify-gray-200 rounded-md focus:ring-spotify-green focus:border-spotify-green"
+  return (
+    <div className="p-4 sm:p-8 text-white space-y-6 sm:space-y-8 h-full animate-fade-in">
+      <h2 className="text-3xl sm:text-4xl font-bold animate-slide-up">Upload Your Song</h2>
+
+      <div className="bg-gradient-to-br from-spotify-gray-500 to-spotify-gray-400 p-6 sm:p-8 rounded-lg space-y-6 max-w-2xl mx-auto shadow-lg animate-slide-up" style={{ animationDelay: '0.1s' }}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="title" className="block text-sm font-medium text-spotify-gray-100 mb-2">Song Title</label>
+            <input
+              id="title"
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Enter the title of your song"
+              className="w-full p-3 bg-spotify-gray-300 border border-spotify-gray-200 rounded-md focus:ring-2 focus:ring-spotify-green focus:border-spotify-green transition-all duration-200"
+            />
+          </div>
+          <div>
+            <label htmlFor="artistStyle" className="block text-sm font-medium text-spotify-gray-100 mb-2">Artist Style</label>
+            <input
+              id="artistStyle"
+              type="text"
+              value={artistStyle}
+              onChange={(e) => setArtistStyle(e.target.value)}
+              placeholder="e.g., Pop, Rock, Jazz"
+              className="w-full p-3 bg-spotify-gray-300 border border-spotify-gray-200 rounded-md focus:ring-2 focus:ring-spotify-green focus:border-spotify-green transition-all duration-200"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <FileDropZone
+            file={songFile}
+            onDrop={(e) => handleDrop(e, false)}
+            onDragOver={(e) => handleDragOver(e, false)}
+            onDragLeave={(e) => handleDragLeave(e, false)}
+            inputRef={fileInputRef}
+            onFileSelect={(e) => handleFileSelect(e, false)}
+            label="Primary Audio File"
+            isDragOver={isDragOver}
+          />
+
+          <FileDropZone
+            file={secondarySongFile}
+            onDrop={(e) => handleDrop(e, true)}
+            onDragOver={(e) => handleDragOver(e, true)}
+            onDragLeave={(e) => handleDragLeave(e, true)}
+            inputRef={secondaryFileInputRef}
+            onFileSelect={(e) => handleFileSelect(e, true)}
+            label="Secondary Audio File (Optional)"
+            isDragOver={isSecondaryDragOver}
           />
         </div>
-        <div>
-          <label htmlFor="artistStyle" className="block text-sm font-medium text-spotify-gray-100">Artist Style</label>
-          <input
-            id="artistStyle"
-            type="text"
-            value={artistStyle}
-            onChange={(e) => setArtistStyle(e.target.value)}
-            placeholder="e.g., Pop, Rock, Jazz"
-            className="w-full mt-1 p-2 bg-spotify-gray-300 border border-spotify-gray-200 rounded-md focus:ring-spotify-green focus:border-spotify-green"
-          />
-        </div>
-        <div>
-          <label htmlFor="songFile" className="block text-sm font-medium text-spotify-gray-100">Select Primary Audio File</label>
-          <input
-            id="songFile"
-            ref={fileInputRef}
-            type="file"
-            accept="audio/mpeg,audio/wav,audio/ogg"
-            onChange={(e) => setSongFile(e.target.files ? e.target.files[0] : null)}
-            className="w-full mt-1 text-sm text-spotify-gray-100 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-spotify-gray-200 file:text-white hover:file:bg-spotify-gray-300 transition-colors"
-          />
-        </div>
-        <div>
-          <label htmlFor="secondarySongFile" className="block text-sm font-medium text-spotify-gray-100">Select Secondary Audio File (Optional)</label>
-          <input
-            id="secondarySongFile"
-            ref={secondaryFileInputRef}
-            type="file"
-            accept="audio/mpeg,audio/wav,audio/ogg"
-            onChange={(e) => setSecondarySongFile(e.target.files ? e.target.files[0] : null)}
-            className="w-full mt-1 text-sm text-spotify-gray-100 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-spotify-gray-200 file:text-white hover:file:bg-spotify-gray-300 transition-colors"
-          />
-        </div>
+
+        {isUploading && (
+          <div className="space-y-2 animate-fade-in">
+            <div className="flex justify-between text-sm text-spotify-gray-100">
+              <span>Uploading...</span>
+              <span>{uploadProgress}%</span>
+            </div>
+            <div className="w-full bg-spotify-gray-300 rounded-full h-2">
+              <div
+                className="bg-spotify-green h-2 rounded-full transition-all duration-300"
+                style={{ width: `${uploadProgress}%` }}
+              ></div>
+            </div>
+          </div>
+        )}
+
         <button
           onClick={handleUpload}
-          disabled={isUploading}
-          className="w-full flex items-center justify-center bg-spotify-green text-black font-bold py-3 px-4 rounded-full hover:bg-green-400 transition duration-300 disabled:bg-spotify-gray-200 disabled:cursor-not-allowed"
+          disabled={isUploading || !title || !artistStyle || !songFile}
+          className="w-full flex items-center justify-center bg-spotify-green text-black font-bold py-3 px-4 rounded-full hover:bg-green-400 transition-all duration-300 disabled:bg-spotify-gray-200 disabled:cursor-not-allowed hover:scale-105 shadow-lg"
         >
           {isUploading ? (
             <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-black"></div>
@@ -107,7 +243,7 @@ const SongUploader: React.FC<SongUploaderProps> = ({ onUploadSong }) => {
             "Upload to Library"
           )}
         </button>
-        {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
+        {error && <p className="text-red-400 text-sm mt-2 animate-fade-in">{error}</p>}
       </div>
     </div>
   );

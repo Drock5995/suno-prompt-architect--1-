@@ -88,3 +88,27 @@ export const SettingsIcon: React.FC<IconProps> = ({ size = 24, className = '' })
         <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
     </svg>
 );
+
+export const VolumeIcon: React.FC<IconProps> = ({ size = 24, className = '' }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} className={className}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 12l3.75-3.75v7.5L6.75 12z" />
+    </svg>
+);
+
+export const VolumeMuteIcon: React.FC<IconProps> = ({ size = 24, className = '' }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} className={className}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 9.75L19.5 12m0 0l2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25M19.5 12L17.25 14.25M6.75 12l3.75-3.75v7.5L6.75 12z" />
+    </svg>
+);
+
+export const SkipBackIcon: React.FC<IconProps> = ({ size = 24, className = '' }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} className={className}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M21 16.811c0 .864-.933 1.405-1.683.977l-7.108-4.062a1.125 1.125 0 010-1.954l7.108-4.062A1.125 1.125 0 0121 8.688v8.123zM11.25 16.811c0 .864-.933 1.405-1.683.977l-7.108-4.062a1.125 1.125 0 010-1.954L9.567 7.71a1.125 1.125 0 011.683.977v8.123z" />
+    </svg>
+);
+
+export const SkipForwardIcon: React.FC<IconProps> = ({ size = 24, className = '' }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} className={className}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 8.688c0-.864.933-1.405 1.683-.977l7.108 4.062a1.125 1.125 0 010 1.954l-7.108 4.062A1.125 1.125 0 013 16.81V8.688zM12.75 8.688c0-.864.933-1.405 1.683-.977l7.108 4.062a1.125 1.125 0 010 1.954l-7.108 4.062a1.125 1.125 0 01-1.683-.977V8.688z" />
+    </svg>
+);
