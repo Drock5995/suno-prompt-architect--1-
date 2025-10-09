@@ -18,6 +18,11 @@ export default {
           '500': '#121212'
         },
         'spotify-green': '#1DB954',
+        'neon-green': '#22c55e',
+        'neon-blue': '#3b82f6',
+        'neon-cyan': '#06b6d4',
+        'neon-purple': '#8b5cf6',
+        'onyx': '#0f0f0f',
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
@@ -54,10 +59,21 @@ export default {
           '50%': { transform: 'translateY(-10px)' },
         },
       },
+      dropShadow: {
+        'neon-green': '0 0 20px rgba(34, 197, 94, 0.8)',
+      },
       boxShadow: {
         'inner-lg': 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.06)',
         'glow': '0 0 20px rgba(29, 185, 84, 0.3)',
         'glow-hover': '0 0 30px rgba(29, 185, 84, 0.5)',
+        'neon-green': '0 0 40px rgba(34, 197, 94, 0.8)',
+        'neon-green-hover': '0 0 60px rgba(34, 197, 94, 1)',
+        'neon-blue': '0 0 40px rgba(59, 130, 246, 0.8)',
+        'neon-blue-hover': '0 0 60px rgba(59, 130, 246, 1)',
+        'neon-cyan': '0 0 40px rgba(6, 182, 212, 0.8)',
+        'neon-purple': '0 0 40px rgba(139, 92, 246, 0.8)',
+        'onyx': '0 0 20px rgba(15, 15, 15, 0.5)',
+        'onyx-hover': '0 0 30px rgba(15, 15, 15, 0.7)',
       },
     }
   },

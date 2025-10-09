@@ -29,9 +29,9 @@ const PublicLibrary: React.FC<PublicLibraryProps> = ({
     return (
       <div className="min-h-screen bg-black text-white p-8 animate-fade-in overflow-y-auto flex flex-col items-center relative">
         {/* Neon accent glows background */}
-        <div className="absolute top-20 left-20 w-32 h-32 bg-green-500/20 rounded-full blur-3xl animate-pulse shadow-neon-green"></div>
-        <div className="absolute bottom-20 right-20 w-40 h-40 bg-cyan-500/20 rounded-full blur-3xl animate-pulse shadow-neon-cyan" style={{ animationDelay: '1s' }}></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-purple-700/10 rounded-full blur-3xl animate-pulse shadow-neon-purple" style={{ animationDelay: '2s' }}></div>
+        <div className="absolute top-20 left-20 w-32 h-32 bg-green-500/40 rounded-full blur-3xl animate-pulse shadow-neon-green"></div>
+        <div className="absolute bottom-20 right-20 w-40 h-40 bg-cyan-500/40 rounded-full blur-3xl animate-pulse shadow-neon-cyan" style={{ animationDelay: '1s' }}></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-purple-700/30 rounded-full blur-3xl animate-pulse shadow-neon-purple" style={{ animationDelay: '2s' }}></div>
 
         <div className="relative z-10 text-center mb-16">
           <h1 className="text-8xl font-bold mb-4 tracking-tight text-white font-futuristic logo-text-container">
