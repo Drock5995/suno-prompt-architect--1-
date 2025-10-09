@@ -87,7 +87,6 @@ const PromptGenerator: React.FC<PromptGeneratorProps> = ({ onSaveSong }) => {
   return (
     <div className="p-4 sm:p-8 text-white space-y-6 sm:space-y-8 h-full">
       <h2 className="text-3xl sm:text-4xl font-bold">Create New Masterpiece</h2>
-      
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
         {/* Step 1: Inputs */}
         <div className="bg-spotify-gray-400 p-4 sm:p-6 rounded-lg space-y-4">

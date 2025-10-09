@@ -1,14 +1,15 @@
 import React, { useState, useCallback } from 'react';
 import { generateSunoPrompt, generateLyrics } from '../services/geminiService';
-import { generateSong as generateSongWithSuno } from '../services/sunoService';
+import { generateSongWithImage } from '../services/sunoService';
 import { SparklesIcon, QuillIcon } from './icons/Icons';
 
 interface PromptGeneratorProps {
-  onSaveSong: (data: { title: string; artistStyle: string; prompt: string; songFile: File; }) => Promise<void>;
+  onSaveSong: (data: { title: string; artistStyle: string; prompt: string; songFile: File; imageFile?: File; }) => Promise<void>;
 }
 
 const PromptGenerator: React.FC<PromptGeneratorProps> = ({ onSaveSong }) => {
   const [artist, setArtist] = useState('');
+  const [inspiredBy, setInspiredBy] = useState('');
   const [vibe, setVibe] = useState('');
   const [lyrics, setLyrics] = useState('');
   const [instrumental, setInstrumental] = useState(false);
@@ -22,37 +23,38 @@ const PromptGenerator: React.FC<PromptGeneratorProps> = ({ onSaveSong }) => {
 
   const [songTitle, setSongTitle] = useState('');
   const [songFile, setSongFile] = useState<File | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [batchSize, setBatchSize] = useState(1);
   const [isBatchMode, setIsBatchMode] = useState(false);
 
   const handleGeneratePrompt = useCallback(async () => {
-    if (!songTitle || !artist || !vibe) {
-      setError('Song Title, Artist Style and Vibe/Theme are required.');
+    if (!songTitle || !artist || !inspiredBy || !vibe) {
+      setError('Song Title, Artist Name, Inspired By, and Vibe/Theme are required.');
       return;
     }
     setError('');
     setGeneratedPrompt('');
     setIsLoading(true);
     try {
-      const prompt = await generateSunoPrompt(artist, vibe, lyrics);
+      const prompt = await generateSunoPrompt(inspiredBy, vibe, lyrics);
       setGeneratedPrompt(prompt);
     } catch (err) {
       setError('Failed to generate prompt. See console for details.');
     } finally {
       setIsLoading(false);
     }
-  }, [songTitle, artist, vibe, lyrics]);
+  }, [songTitle, artist, inspiredBy, vibe, lyrics]);
 
   const handleGenerateLyrics = useCallback(async () => {
-    if (!artist || !vibe) {
-      setError('Please provide an Artist Style and Vibe first.');
+    if (!inspiredBy || !vibe) {
+      setError('Please provide Inspired By and Vibe first.');
       return;
     }
     setError('');
     setIsGeneratingLyrics(true);
     setLyrics('Generating lyrics...');
     try {
-      const generatedLyrics = await generateLyrics(artist, vibe);
+      const generatedLyrics = await generateLyrics(inspiredBy, vibe);
       setLyrics(generatedLyrics);
     } catch (err) {
       setError('Failed to generate lyrics.');
@@ -60,7 +62,7 @@ const PromptGenerator: React.FC<PromptGeneratorProps> = ({ onSaveSong }) => {
     } finally {
       setIsGeneratingLyrics(false);
     }
-  }, [artist, vibe]);
+  }, [inspiredBy, vibe]);
 
   const handleGenerateSong = useCallback(async () => {
     if (!generatedPrompt) {
@@ -75,31 +77,39 @@ const PromptGenerator: React.FC<PromptGeneratorProps> = ({ onSaveSong }) => {
     setIsGeneratingSong(true);
     try {
       if (isBatchMode && batchSize > 1) {
+        // For batch mode, generate without image for simplicity
         for (let i = 0; i < batchSize; i++) {
           const batchTitle = `${songTitle} #${i + 1}`;
-          const styleOfMusic = `${artist} - ${vibe}`;
-          const audioUrl = await generateSongWithSuno(batchTitle, styleOfMusic, instrumental, lyrics, generatedPrompt);
+          const styleOfMusic = `${inspiredBy} - ${vibe}`;
+          const { audioUrl } = await generateSongWithImage(batchTitle, styleOfMusic, instrumental, lyrics, generatedPrompt, vibe);
           const response = await fetch(audioUrl);
           const blob = await response.blob();
           const file = new File([blob], `suno_song_${i + 1}.mp3`, { type: 'audio/mpeg' });
           // For batch, you might want to save or handle files differently
           // Here we just set the last generated file
           setSongFile(file);
+          setImageFile(null); // No image for batch
         }
       } else {
-        const styleOfMusic = `${artist} - ${vibe}`;
-        const audioUrl = await generateSongWithSuno(songTitle, styleOfMusic, instrumental, lyrics, generatedPrompt);
+        const styleOfMusic = `${inspiredBy} - ${vibe}`;
+        const { audioUrl, imageDataUrl } = await generateSongWithImage(songTitle, styleOfMusic, instrumental, lyrics, generatedPrompt, vibe);
         const response = await fetch(audioUrl);
         const blob = await response.blob();
-        const file = new File([blob], 'suno_song.mp3', { type: 'audio/mpeg' });
-        setSongFile(file);
+        const songFile = new File([blob], 'suno_song.mp3', { type: 'audio/mpeg' });
+        setSongFile(songFile);
+
+        // Convert image data URL to File
+        const imageResponse = await fetch(imageDataUrl);
+        const imageBlob = await imageResponse.blob();
+        const imageFile = new File([imageBlob], 'cover_art.png', { type: 'image/png' });
+        setImageFile(imageFile);
       }
     } catch (err) {
       setError('Failed to generate song. Check your Suno API key in the settings.');
     } finally {
       setIsGeneratingSong(false);
     }
-  }, [generatedPrompt, songTitle, artist, vibe, instrumental, lyrics, isBatchMode, batchSize]);
+  }, [generatedPrompt, songTitle, inspiredBy, vibe, instrumental, lyrics, isBatchMode, batchSize]);
 
   const handleSave = async () => {
     if (!songTitle || !songFile || !generatedPrompt) {
@@ -114,14 +124,17 @@ const PromptGenerator: React.FC<PromptGeneratorProps> = ({ onSaveSong }) => {
           artistStyle: artist,
           prompt: generatedPrompt,
           songFile: songFile,
+          imageFile: imageFile || undefined,
       });
       // Reset form on successful save
       setArtist('');
+      setInspiredBy('');
       setVibe('');
       setLyrics('');
       setGeneratedPrompt('');
       setSongTitle('');
       setSongFile(null);
+      setImageFile(null);
       setInstrumental(false);
     } catch (error) {
       console.error("Failed to save song:", error);
@@ -174,12 +187,23 @@ const PromptGenerator: React.FC<PromptGeneratorProps> = ({ onSaveSong }) => {
             />
           </div>
           <div>
-            <label htmlFor="artist" className="block text-sm font-medium text-spotify-gray-100">Artist Style</label>
+            <label htmlFor="artist" className="block text-sm font-medium text-spotify-gray-100">Artist Name</label>
             <input
               id="artist"
               type="text"
               value={artist}
               onChange={(e) => setArtist(e.target.value)}
+              placeholder="e.g., The Synthwave Rebels"
+              className="w-full mt-1 p-3 bg-spotify-gray-300 border border-spotify-gray-200 rounded-md focus:ring-2 focus:ring-spotify-green focus:border-spotify-green transition-all duration-200"
+            />
+          </div>
+          <div>
+            <label htmlFor="inspiredBy" className="block text-sm font-medium text-spotify-gray-100">Inspired By</label>
+            <input
+              id="inspiredBy"
+              type="text"
+              value={inspiredBy}
+              onChange={(e) => setInspiredBy(e.target.value)}
               placeholder="e.g., Daft Punk, Tame Impala, Billie Eilish"
               className="w-full mt-1 p-3 bg-spotify-gray-300 border border-spotify-gray-200 rounded-md focus:ring-2 focus:ring-spotify-green focus:border-spotify-green transition-all duration-200"
             />
@@ -317,6 +341,16 @@ const PromptGenerator: React.FC<PromptGeneratorProps> = ({ onSaveSong }) => {
                       className="w-full mt-1 p-3 bg-spotify-gray-300 border border-spotify-gray-200 rounded-md focus:ring-2 focus:ring-spotify-green focus:border-spotify-green transition-all duration-200"
                     />
                   </div>
+                  {imageFile && (
+                    <div className="mt-4">
+                      <label className="block text-sm font-medium text-spotify-gray-100">Generated Cover Art</label>
+                      <img
+                        src={URL.createObjectURL(imageFile)}
+                        alt="Generated cover art"
+                        className="w-full max-w-xs mx-auto mt-2 rounded-lg shadow-lg"
+                      />
+                    </div>
+                  )}
                   <button
                     onClick={handleSave}
                     disabled={isSaving}

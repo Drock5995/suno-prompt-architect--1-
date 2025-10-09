@@ -27,6 +27,7 @@ const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
   const [isAdminPublicMode, setIsAdminPublicMode] = useState<boolean>(false);
+  const [isPlayerExpanded, setIsPlayerExpanded] = useState<boolean>(false);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
@@ -128,10 +129,10 @@ const App: React.FC = () => {
     fetchSongs();
   }, [session]);
 
-  const handleSaveSong = useCallback(async (data: { title: string; artistStyle: string; prompt: string; songFile: File; }) => {
+  const handleSaveSong = useCallback(async (data: { title: string; artistStyle: string; prompt: string; songFile: File; imageFile?: File; }) => {
     if (!session?.user) throw new Error("User not authenticated.");
 
-    const { title, artistStyle, prompt, songFile } = data;
+    const { title, artistStyle, prompt, songFile, imageFile } = data;
 
     const fileExt = songFile.name.split('.').pop();
     const filePath = `${session.user.id}/${crypto.randomUUID()}.${fileExt}`;
@@ -144,12 +145,30 @@ const App: React.FC = () => {
 
     const { data: urlData } = supabase.storage.from('songs').getPublicUrl(filePath);
 
+    let coverArtUrl = `https://picsum.photos/seed/${crypto.randomUUID()}/400`;
+    if (imageFile) {
+      const imageFileExt = imageFile.name.split('.').pop();
+      const imageFilePath = `${session.user.id}/${crypto.randomUUID()}.${imageFileExt}`;
+
+      const { error: imageUploadError } = await supabase.storage
+        .from('songs')
+        .upload(imageFilePath, imageFile, { contentType: imageFile.type });
+
+      if (imageUploadError) {
+        // If image upload fails, continue with default cover art
+        console.error("Failed to upload image:", imageUploadError);
+      } else {
+        const { data: imageUrlData } = supabase.storage.from('songs').getPublicUrl(imageFilePath);
+        coverArtUrl = imageUrlData.publicUrl;
+      }
+    }
+
     const newSongPayload = {
       title,
       artist_style: artistStyle,
       prompt,
       song_url: urlData.publicUrl,
-      cover_art_url: `https://picsum.photos/seed/${crypto.randomUUID()}/400`,
+      cover_art_url: coverArtUrl,
       user_id: session.user.id,
     };
 
@@ -179,10 +198,10 @@ const App: React.FC = () => {
     setIsSidebarOpen(false);
   }, [session]);
 
-  const handleUploadSong = useCallback(async (data: { title: string; artistStyle: string; songFile: File; secondarySongFile?: File; }) => {
+  const handleUploadSong = useCallback(async (data: { title: string; artistStyle: string; songFile: File; secondarySongFile?: File; imageFile?: File; }) => {
     if (!session?.user) throw new Error("User not authenticated.");
 
-    const { title, artistStyle, songFile, secondarySongFile } = data;
+    const { title, artistStyle, songFile, secondarySongFile, imageFile } = data;
 
     const fileExt = songFile.name.split('.').pop();
     const filePath = `${session.user.id}/${crypto.randomUUID()}.${fileExt}`;
@@ -213,13 +232,31 @@ const App: React.FC = () => {
       secondaryUrl = secondaryUrlData.publicUrl;
     }
 
+    let coverArtUrl = `https://picsum.photos/seed/${crypto.randomUUID()}/400`;
+    if (imageFile) {
+      const imageFileExt = imageFile.name.split('.').pop();
+      const imageFilePath = `${session.user.id}/${crypto.randomUUID()}.${imageFileExt}`;
+
+      const { error: imageUploadError } = await supabase.storage
+        .from('songs')
+        .upload(imageFilePath, imageFile, { contentType: imageFile.type });
+
+      if (imageUploadError) {
+        // If image upload fails, continue with default cover art
+        console.error("Failed to upload image:", imageUploadError);
+      } else {
+        const { data: imageUrlData } = supabase.storage.from('songs').getPublicUrl(imageFilePath);
+        coverArtUrl = imageUrlData.publicUrl;
+      }
+    }
+
     const newSongPayload = {
       title,
       artist_style: artistStyle,
       prompt: 'Uploaded song',
       song_url: urlData.publicUrl,
       secondary_song_url: secondaryUrl,
-      cover_art_url: `https://picsum.photos/seed/${crypto.randomUUID()}/400`,
+      cover_art_url: coverArtUrl,
       user_id: session.user.id,
     };
 
@@ -314,9 +351,11 @@ const App: React.FC = () => {
   const handleSelectSong = useCallback((song: Song) => {
     if (currentSong?.id === song.id) {
         setIsPlaying(prev => !prev);
+        setIsPlayerExpanded(true);
     } else {
         setCurrentSong(song);
         setIsPlaying(true);
+        setIsPlayerExpanded(true);
     }
   }, [currentSong]);
 
@@ -355,6 +394,10 @@ const App: React.FC = () => {
 
   const handleToggleAdminPublicMode = () => {
     setIsAdminPublicMode(prev => !prev);
+  }
+
+  const handleTogglePlayerExpanded = () => {
+    setIsPlayerExpanded(prev => !prev);
   }
 
 
@@ -446,6 +489,8 @@ const App: React.FC = () => {
             onPreviousSong={handlePreviousSong}
             hasNextSong={publicSongs.findIndex(s => s.id === currentSong.id) < publicSongs.length - 1}
             hasPreviousSong={publicSongs.findIndex(s => s.id === currentSong.id) > 0}
+            isExpanded={isPlayerExpanded}
+            onToggleExpanded={handleTogglePlayerExpanded}
           />
         )}
       </div>
@@ -474,6 +519,8 @@ const App: React.FC = () => {
           onPreviousSong={handlePreviousSong}
           hasNextSong={(isAdminPublicMode ? publicSongs : songs).findIndex(s => s.id === currentSong.id) < (isAdminPublicMode ? publicSongs : songs).length - 1}
           hasPreviousSong={(isAdminPublicMode ? publicSongs : songs).findIndex(s => s.id === currentSong.id) > 0}
+          isExpanded={isPlayerExpanded}
+          onToggleExpanded={handleTogglePlayerExpanded}
         />
       )}
       <SettingsModal isOpen={isSettingsModalOpen} onClose={handleToggleSettingsModal} />

@@ -20,7 +20,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, isOpen, se
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <LogoIcon />
-          <h1 className="text-2xl font-bold text-white">Suno Architect</h1>
+          <h1 className="text-2xl font-bold text-white">SUNOFY</h1>
         </div>
         <button onClick={() => setIsOpen(false)} className="md:hidden text-spotify-gray-100 hover:text-white">
           <CloseIcon />

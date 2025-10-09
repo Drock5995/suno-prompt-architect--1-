@@ -1,21 +1,19 @@
-# TODO: Transform to Admin Panel + Public Streaming App
+# TODO: Implement Image Generation for Songs
 
 ## Completed
 - [x] Analyze current codebase
 - [x] Create implementation plan
 - [x] Get user approval
-- [x] Modify types.ts (not needed)
-- [x] Create PublicLibrary component
-- [x] Modify SongLibrary for public mode
-- [x] Update App.tsx for public/admin rendering
-- [x] Add toggle button in Header for admin to switch between admin and public view
-- [x] Add batch generation feature
-- [x] Enhance UI design
-- [x] Fix public access for unauthenticated users
+- [x] Create imageService.ts with Gemini Imagen integration
+- [x] Add generateSongWithImage function in sunoService.ts
+- [x] Update PromptGenerator.tsx to use new function and handle images
+- [x] Update App.tsx handleSaveSong to upload and save image files
+- [x] Add image preview in PromptGenerator UI
 
 ## In Progress
-- [ ] Test public access and admin login
+- [x] Test the image generation feature
 
 ## Pending
-- [ ] Add search/filter in public library
-- [ ] Deploy and verify
+- [ ] Handle image regeneration if user wants to change cover art
+- [ ] Add error handling for image generation failures
+- [ ] Optimize image storage and loading

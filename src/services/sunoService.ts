@@ -1,3 +1,5 @@
+import { generateImage, generateImagePrompt } from './imageService';
+
 const getApiKey = () => {
   return localStorage.getItem('suno_api_key');
 };
@@ -99,6 +101,29 @@ export const generateSong = async (
     return audioUrl;
   } catch (error) {
     console.error('Error in generateSong:', error);
+    throw error;
+  }
+};
+
+export const generateSongWithImage = async (
+  title: string,
+  styleOfMusic: string,
+  instrumental: boolean,
+  lyrics: string,
+  prompt: string,
+  vibe?: string
+): Promise<{ audioUrl: string; imageDataUrl: string }> => {
+  try {
+    // Generate song first
+    const audioUrl = await generateSong(title, styleOfMusic, instrumental, lyrics, prompt);
+
+    // Generate image prompt and image
+    const imagePrompt = generateImagePrompt(title, styleOfMusic, prompt, vibe);
+    const imageDataUrl = await generateImage(imagePrompt);
+
+    return { audioUrl, imageDataUrl };
+  } catch (error) {
+    console.error('Error in generateSongWithImage:', error);
     throw error;
   }
 };

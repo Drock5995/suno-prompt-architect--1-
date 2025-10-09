@@ -1,13 +1,15 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { UploadIcon } from './icons/Icons';
+import { generateImagePrompt, generateImage } from '../services/imageService';
 
 interface SongUploaderProps {
-  onUploadSong: (data: { title: string; artistStyle: string; songFile: File; secondarySongFile?: File; }) => Promise<void>;
+  onUploadSong: (data: { title: string; artistStyle: string; songFile: File; secondarySongFile?: File; imageFile?: File; }) => Promise<void>;
 }
 
 const SongUploader: React.FC<SongUploaderProps> = ({ onUploadSong }) => {
   const [title, setTitle] = useState('');
   const [artistStyle, setArtistStyle] = useState('');
+  const [inspiredBy, setInspiredBy] = useState('');
   const [songFile, setSongFile] = useState<File | null>(null);
   const [secondarySongFile, setSecondarySongFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -70,8 +72,8 @@ const SongUploader: React.FC<SongUploaderProps> = ({ onUploadSong }) => {
   };
 
   const handleUpload = async () => {
-    if (!title || !artistStyle || !songFile) {
-      setError('Please provide a Song Title, Artist Style, and select an audio file.');
+    if (!title || !artistStyle || !inspiredBy || !songFile) {
+      setError('Please provide a Song Title, Artist Name, Inspired By, and select an audio file.');
       return;
     }
     setError('');
@@ -90,16 +92,31 @@ const SongUploader: React.FC<SongUploaderProps> = ({ onUploadSong }) => {
     }, 200);
 
     try {
+      let imageFile: File | undefined;
+      try {
+        // Generate image for the uploaded song
+        const imagePrompt = generateImagePrompt(title, artistStyle, `Inspired by ${inspiredBy}`, inspiredBy);
+        const imageDataUrl = await generateImage(imagePrompt);
+        const imageResponse = await fetch(imageDataUrl);
+        const imageBlob = await imageResponse.blob();
+        imageFile = new File([imageBlob], 'cover_art.png', { type: 'image/png' });
+      } catch (imageError) {
+        console.warn("Image generation failed, proceeding with default cover art:", imageError);
+        // imageFile remains undefined, will use default
+      }
+
       await onUploadSong({
         title,
         artistStyle,
         songFile,
         secondarySongFile: secondarySongFile || undefined,
+        imageFile,
       });
       setUploadProgress(100);
       // Reset form on successful upload
       setTitle('');
       setArtistStyle('');
+      setInspiredBy('');
       setSongFile(null);
       setSecondarySongFile(null);
       if (fileInputRef.current) {
@@ -168,7 +185,7 @@ const SongUploader: React.FC<SongUploaderProps> = ({ onUploadSong }) => {
       <h2 className="text-3xl sm:text-4xl font-bold animate-slide-up">Upload Your Song</h2>
 
       <div className="bg-gradient-to-br from-spotify-gray-500 to-spotify-gray-400 p-6 sm:p-8 rounded-lg space-y-6 max-w-2xl mx-auto shadow-lg animate-slide-up" style={{ animationDelay: '0.1s' }}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label htmlFor="title" className="block text-sm font-medium text-spotify-gray-100 mb-2">Song Title</label>
             <input
@@ -181,13 +198,24 @@ const SongUploader: React.FC<SongUploaderProps> = ({ onUploadSong }) => {
             />
           </div>
           <div>
-            <label htmlFor="artistStyle" className="block text-sm font-medium text-spotify-gray-100 mb-2">Artist Style</label>
+            <label htmlFor="artistStyle" className="block text-sm font-medium text-spotify-gray-100 mb-2">Artist Name</label>
             <input
               id="artistStyle"
               type="text"
               value={artistStyle}
               onChange={(e) => setArtistStyle(e.target.value)}
-              placeholder="e.g., Pop, Rock, Jazz"
+              placeholder="e.g., The Synthwave Rebels"
+              className="w-full p-3 bg-spotify-gray-300 border border-spotify-gray-200 rounded-md focus:ring-2 focus:ring-spotify-green focus:border-spotify-green transition-all duration-200"
+            />
+          </div>
+          <div>
+            <label htmlFor="inspiredBy" className="block text-sm font-medium text-spotify-gray-100 mb-2">Inspired By</label>
+            <input
+              id="inspiredBy"
+              type="text"
+              value={inspiredBy}
+              onChange={(e) => setInspiredBy(e.target.value)}
+              placeholder="e.g., Daft Punk, Tame Impala"
               className="w-full p-3 bg-spotify-gray-300 border border-spotify-gray-200 rounded-md focus:ring-2 focus:ring-spotify-green focus:border-spotify-green transition-all duration-200"
             />
           </div>
@@ -234,7 +262,7 @@ const SongUploader: React.FC<SongUploaderProps> = ({ onUploadSong }) => {
 
         <button
           onClick={handleUpload}
-          disabled={isUploading || !title || !artistStyle || !songFile}
+          disabled={isUploading || !title || !artistStyle || !inspiredBy || !songFile}
           className="w-full flex items-center justify-center bg-spotify-green text-black font-bold py-3 px-4 rounded-full hover:bg-green-400 transition-all duration-300 disabled:bg-spotify-gray-200 disabled:cursor-not-allowed hover:scale-105 shadow-lg"
         >
           {isUploading ? (
