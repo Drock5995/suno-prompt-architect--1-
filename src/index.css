@@ -18,5 +18,21 @@
   justify-content: center;
   align-items: center;
   margin-bottom: -85px;
-  margin-top: -90px;
+  margin-top: -115px;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: clamp(3rem, 30vw, 3rem);
+}
+
+@media (min-width: 640px) {
+  .logo-text-container {
+    padding-left: 0;
+    padding-right: 0;
+  }
 }
