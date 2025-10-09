@@ -350,14 +350,16 @@ const App: React.FC = () => {
 
   const handleSelectSong = useCallback((song: Song) => {
     if (currentSong?.id === song.id) {
-        setIsPlaying(prev => !prev);
+        if (!isPlaying) {
+            setIsPlaying(true);
+        }
         setIsPlayerExpanded(true);
     } else {
         setCurrentSong(song);
         setIsPlaying(true);
         setIsPlayerExpanded(true);
     }
-  }, [currentSong]);
+  }, [currentSong, isPlaying]);
 
   const handleTogglePlayPause = useCallback(() => setIsPlaying(prev => !prev), []);
 

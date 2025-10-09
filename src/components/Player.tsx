@@ -117,17 +117,37 @@ const Player: React.FC<PlayerProps> = ({ song, isPlaying, onTogglePlayPause, aud
           <h3 className="text-xl font-semibold text-white mb-2">{song.title}</h3>
           <p className="text-spotify-gray-100 mb-8">{song.artistStyle}</p>
           <div className="w-full max-w-md">
-            <div className="flex items-center space-x-4 mb-4">
+            <div className="flex items-center justify-center space-x-4 mb-4">
+              {hasPreviousSong && (
+                <button onClick={onPreviousSong} className="text-white hover:text-spotify-gray-100 transition-colors">
+                  <SkipBackIcon size={32} />
+                </button>
+              )}
               <button onClick={skipBackward} className="text-white hover:text-spotify-gray-100 transition-colors">
-                <SkipBackIcon size={32} />
+                <SkipBackIcon size={24} />
               </button>
               <button onClick={onTogglePlayPause} className="bg-spotify-green text-black rounded-full p-4 hover:scale-105 transition-all">
                 {isPlaying ? <PauseIcon size={32} /> : <PlayIcon size={32} />}
               </button>
               <button onClick={skipForward} className="text-white hover:text-spotify-gray-100 transition-colors">
-                <SkipForwardIcon size={32} />
+                <SkipForwardIcon size={24} />
               </button>
+              {hasNextSong && (
+                <button onClick={onNextSong} className="text-white hover:text-spotify-gray-100 transition-colors">
+                  <SkipForwardIcon size={32} />
+                </button>
+              )}
             </div>
+            {song.secondarySongUrl && (
+              <div className="flex justify-center mb-4">
+                <button
+                  onClick={() => setCurrentVersion(currentVersion === 'primary' ? 'secondary' : 'primary')}
+                  className="bg-spotify-gray-300 text-white rounded-full p-2 hover:bg-spotify-gray-200 transition-all duration-200 hover:scale-105"
+                >
+                  {currentVersion === 'primary' ? '2' : '1'}
+                </button>
+              </div>
+            )}
             <div className="flex items-center space-x-2 mb-4">
               <span className="text-white">{formatTime(currentTime)}</span>
               <input
