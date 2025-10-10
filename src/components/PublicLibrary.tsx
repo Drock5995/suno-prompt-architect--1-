@@ -108,6 +108,9 @@ const PublicLibrary: React.FC<PublicLibraryProps> = ({
           <p className="text-gray-400 text-sm animate-fade-in" style={{ animationDelay: '1s' }}>
             Tap an icon to explore
           </p>
+          <p className="text-gray-500 text-xs mt-4 animate-fade-in" style={{ animationDelay: '1.5s' }}>
+            Built with questionable life choices by <span className="font-bold text-green-400">David Spradlin</span>, a self-taught developer who codes like a caffeinated squirrel.
+          </p>
         </div>
       </div>
     );

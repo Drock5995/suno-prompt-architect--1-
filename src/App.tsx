@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Song, View, PublicView, Session } from './types';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';

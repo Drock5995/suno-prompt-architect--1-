@@ -102,88 +102,85 @@ const Player: React.FC<PlayerProps> = ({ song, isPlaying, onTogglePlayPause, aud
         }
     }
 
-  if (isExpanded) {
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex flex-col animate-slide-up">
-        <audio ref={audioRef} src={currentVersion === 'primary' ? song.songUrl : song.secondarySongUrl || song.songUrl} key={`${song.id}-${currentVersion}`} onEnded={onTogglePlayPause} />
-        <div className="flex justify-center pt-8">
-          <button onClick={onToggleExpanded} className="text-white hover:text-spotify-gray-100 transition-colors">
-            <ChevronDownIcon size={32} />
-          </button>
-        </div>
-        <div className="flex-1 flex flex-col items-center justify-center px-4">
-          <h2 className="text-2xl font-bold text-white mb-8">Now Playing</h2>
-          <img src={song.coverArtUrl} alt={song.title} className="w-64 h-64 rounded-lg shadow-2xl mb-8" />
-          <h3 className="text-xl font-semibold text-white mb-2">{song.title}</h3>
-          <p className="text-spotify-gray-100 mb-8">{song.artistStyle}</p>
-          <div className="w-full max-w-md">
-            <div className="flex items-center justify-center space-x-4 mb-4">
-              {hasPreviousSong && (
-                <button onClick={onPreviousSong} className="text-white hover:text-spotify-gray-100 transition-colors">
-                  <SkipBackIcon size={32} />
+  return (
+    <>
+      {isExpanded && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex flex-col animate-slide-up">
+          <div className="flex justify-center pt-8">
+            <button onClick={onToggleExpanded} className="text-white hover:text-spotify-gray-100 transition-colors">
+              <ChevronDownIcon size={32} />
+            </button>
+          </div>
+          <div className="flex-1 flex flex-col items-center justify-center px-4">
+            <h2 className="text-2xl font-bold text-white mb-8">Now Playing</h2>
+            <img src={song.coverArtUrl} alt={song.title} className="w-64 h-64 rounded-lg shadow-2xl mb-8" />
+            <h3 className="text-xl font-semibold text-white mb-2">{song.title}</h3>
+            <p className="text-spotify-gray-100 mb-8">{song.artistStyle}</p>
+            <div className="w-full max-w-md">
+              <div className="flex items-center justify-center space-x-4 mb-4">
+                {hasPreviousSong && (
+                  <button onClick={onPreviousSong} className="text-white hover:text-spotify-gray-100 transition-colors">
+                    <SkipBackIcon size={32} />
+                  </button>
+                )}
+                <button onClick={skipBackward} className="text-white hover:text-spotify-gray-100 transition-colors">
+                  <SkipBackIcon size={24} />
                 </button>
-              )}
-              <button onClick={skipBackward} className="text-white hover:text-spotify-gray-100 transition-colors">
-                <SkipBackIcon size={24} />
-              </button>
-              <button onClick={onTogglePlayPause} className="bg-spotify-green text-black rounded-full p-4 hover:scale-105 transition-all">
-                {isPlaying ? <PauseIcon size={32} /> : <PlayIcon size={32} />}
-              </button>
-              <button onClick={skipForward} className="text-white hover:text-spotify-gray-100 transition-colors">
-                <SkipForwardIcon size={24} />
-              </button>
-              {hasNextSong && (
-                <button onClick={onNextSong} className="text-white hover:text-spotify-gray-100 transition-colors">
-                  <SkipForwardIcon size={32} />
+                <button onClick={onTogglePlayPause} className="bg-spotify-green text-black rounded-full p-4 hover:scale-105 transition-all">
+                  {isPlaying ? <PauseIcon size={32} /> : <PlayIcon size={32} />}
                 </button>
-              )}
-            </div>
-            {song.secondarySongUrl && (
-              <div className="flex justify-center mb-4">
-                <button
-                  onClick={() => setCurrentVersion(currentVersion === 'primary' ? 'secondary' : 'primary')}
-                  className="bg-spotify-gray-300 text-white rounded-full p-2 hover:bg-spotify-gray-200 transition-all duration-200 hover:scale-105"
-                >
-                  {currentVersion === 'primary' ? '2' : '1'}
+                <button onClick={skipForward} className="text-white hover:text-spotify-gray-100 transition-colors">
+                  <SkipForwardIcon size={24} />
                 </button>
+                {hasNextSong && (
+                  <button onClick={onNextSong} className="text-white hover:text-spotify-gray-100 transition-colors">
+                    <SkipForwardIcon size={32} />
+                  </button>
+                )}
               </div>
-            )}
-            <div className="flex items-center space-x-2 mb-4">
-              <span className="text-white">{formatTime(currentTime)}</span>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={progress}
-                onChange={handleProgressChange}
-                className="w-full h-2 bg-spotify-gray-300 rounded-lg appearance-none cursor-pointer"
-                style={{ background: `linear-gradient(to right, #1DB954 0%, #1DB954 ${progress}%, #535353 ${progress}%, #535353 100%)` }}
-              />
-              <span className="text-white">{formatTime(duration)}</span>
-            </div>
-            <div className="flex items-center justify-center space-x-4">
-              <button onClick={toggleMute} className="text-white hover:text-spotify-gray-100">
-                {isMuted ? <VolumeMuteIcon size={24} /> : <VolumeIcon size={24} />}
-              </button>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={isMuted ? 0 : volume * 100}
-                onChange={handleVolumeChange}
-                className="w-32 h-1 bg-spotify-gray-300 rounded-lg appearance-none cursor-pointer"
-                style={{ background: `linear-gradient(to right, #1DB954 0%, #1DB954 ${isMuted ? 0 : volume * 100}%, #535353 ${isMuted ? 0 : volume * 100}%, #535353 100%)` }}
-              />
+              {song.secondarySongUrl && (
+                <div className="flex justify-center mb-4">
+                  <button
+                    onClick={() => setCurrentVersion(currentVersion === 'primary' ? 'secondary' : 'primary')}
+                    className="bg-spotify-gray-300 text-white rounded-full p-2 hover:bg-spotify-gray-200 transition-all duration-200 hover:scale-105"
+                  >
+                    {currentVersion === 'primary' ? '2' : '1'}
+                  </button>
+                </div>
+              )}
+              <div className="flex items-center space-x-2 mb-4">
+                <span className="text-white">{formatTime(currentTime)}</span>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={progress}
+                  onChange={handleProgressChange}
+                  className="w-full h-2 bg-spotify-gray-300 rounded-lg appearance-none cursor-pointer"
+                  style={{ background: `linear-gradient(to right, #1DB954 0%, #1DB954 ${progress}%, #535353 ${progress}%, #535353 100%)` }}
+                />
+                <span className="text-white">{formatTime(duration)}</span>
+              </div>
+              <div className="flex items-center justify-center space-x-4">
+                <button onClick={toggleMute} className="text-white hover:text-spotify-gray-100">
+                  {isMuted ? <VolumeMuteIcon size={24} /> : <VolumeIcon size={24} />}
+                </button>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={isMuted ? 0 : volume * 100}
+                  onChange={handleVolumeChange}
+                  className="w-32 h-1 bg-spotify-gray-300 rounded-lg appearance-none cursor-pointer"
+                  style={{ background: `linear-gradient(to right, #1DB954 0%, #1DB954 ${isMuted ? 0 : volume * 100}%, #535353 ${isMuted ? 0 : volume * 100}%, #535353 100%)` }}
+                />
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    );
-  }
-
-  return (
-    <footer className="bg-gradient-to-r from-spotify-gray-500 to-spotify-gray-400 h-[90px] p-2 sm:p-4 flex items-center justify-between border-t border-spotify-gray-300 shadow-lg animate-slide-up">
-      <audio ref={audioRef} src={currentVersion === 'primary' ? song.songUrl : song.secondarySongUrl || song.songUrl} key={`${song.id}-${currentVersion}`} onEnded={onTogglePlayPause} />
+      )}
+      <footer className="bg-gradient-to-r from-spotify-gray-500 to-spotify-gray-400 h-[90px] p-2 sm:p-4 flex items-center justify-between border-t border-spotify-gray-300 shadow-lg animate-slide-up">
+        <audio ref={audioRef} src={currentVersion === 'primary' ? song.songUrl : song.secondarySongUrl || song.songUrl} key={`${song.id}-${currentVersion}`} onEnded={onTogglePlayPause} />
       <div className="flex items-center space-x-2 sm:space-x-4 w-1/3 sm:w-1/4">
         <img src={song.coverArtUrl} alt={song.title} className="w-10 h-10 sm:w-14 sm:h-14 rounded-md flex-shrink-0 shadow-md cursor-pointer" onClick={onToggleExpanded} />
         <div className="overflow-hidden">
@@ -267,6 +264,7 @@ const Player: React.FC<PlayerProps> = ({ song, isPlaying, onTogglePlayPause, aud
         />
       </div>
     </footer>
+    </>
   );
 };
 
