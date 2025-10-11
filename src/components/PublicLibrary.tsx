@@ -25,6 +25,8 @@ const PublicLibrary: React.FC<PublicLibraryProps> = ({
   onPublicViewChange,
   loginButtonText,
 }) => {
+
+
   if (publicView === PublicView.HOME) {
     return (
       <div className="min-h-screen bg-black text-white p-8 animate-fade-in overflow-y-auto flex flex-col items-center relative">
@@ -43,7 +45,7 @@ const PublicLibrary: React.FC<PublicLibraryProps> = ({
           </p>
         </div>
 
-        <div className="grid grid-cols-3 gap-8 sm:gap-12 relative z-10">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-8 sm:gap-12 relative z-10">
           <button
             onClick={() => onPublicViewChange(PublicView.LIBRARY)}
             className="flex flex-col items-center space-y-4 cursor-pointer group perspective"
@@ -204,6 +206,8 @@ const PublicLibrary: React.FC<PublicLibraryProps> = ({
       </div>
     );
   }
+
+
 
   // Fallback: show loading or empty state
   return (

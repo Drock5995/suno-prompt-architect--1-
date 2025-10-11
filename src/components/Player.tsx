@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Song } from '../types';
 import { PlayIcon, PauseIcon, VolumeIcon, VolumeMuteIcon, SkipBackIcon, SkipForwardIcon, ChevronDownIcon } from './icons/Icons';
+import AudioVisualizer from './AudioVisualizer';
 
 interface PlayerProps {
   song: Song;
@@ -30,44 +31,105 @@ const Player: React.FC<PlayerProps> = ({ song, isPlaying, onTogglePlayPause, aud
     const [volume, setVolume] = useState(1);
     const [isMuted, setIsMuted] = useState(false);
     const [previousVolume, setPreviousVolume] = useState(1);
+    const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
+    const audioContextRef = useRef<AudioContext | null>(null);
 
+    // Set up analyser with MediaElementSource
+    useEffect(() => {
+        const audio = audioRef.current;
+        if (!audio) return;
+
+        const setupAnalyser = async () => {
+            if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+                audioContextRef.current.close();
+            }
+            const audioContext = new AudioContext();
+            if (audioContext.state === 'suspended') {
+                await audioContext.resume();
+            }
+            const source = audioContext.createMediaElementSource(audio);
+            const analyser = audioContext.createAnalyser();
+            analyser.fftSize = 256;
+            source.connect(analyser);
+            analyser.connect(audioContext.destination);
+
+            setAnalyser(analyser);
+            audioContextRef.current = audioContext;
+        };
+
+        if (audio.readyState >= 2) {
+            setupAnalyser();
+        } else {
+            audio.addEventListener('loadedmetadata', setupAnalyser);
+        }
+
+        return () => {
+            if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+                audioContextRef.current.close();
+            }
+        };
+    }, [song.id, currentVersion]);
+
+    // Handle play/pause
+    useEffect(() => {
+        const audio = audioRef.current;
+        if (!audio) return;
+
+        if (isPlaying) {
+            if (audio.readyState >= 2) {
+                audio.play().catch(e => console.error("Error playing audio:", e));
+            } else {
+                const onLoaded = () => {
+                    audio.play().catch(e => console.error("Error playing audio:", e));
+                    audio.removeEventListener('loadeddata', onLoaded);
+                };
+                audio.addEventListener('loadeddata', onLoaded);
+            }
+        } else {
+            audio.pause();
+        }
+    }, [isPlaying, song.id, currentVersion]);
+
+    // Update progress
     useEffect(() => {
         const audio = audioRef.current;
         if (!audio) return;
 
         const updateProgress = () => {
             setCurrentTime(audio.currentTime);
-            setProgress((audio.currentTime / audio.duration) * 100 || 0);
+            setDuration(audio.duration);
+            setProgress((audio.currentTime / audio.duration) * 100);
         };
-        const setAudioDuration = () => setDuration(audio.duration);
 
-        // Reset progress for new song
-        setProgress(0);
-        setCurrentTime(0);
-        setDuration(audio.duration || 0);
+        const handleTimeUpdate = () => updateProgress();
+        audio.addEventListener('timeupdate', handleTimeUpdate);
 
-        audio.addEventListener('timeupdate', updateProgress);
-        audio.addEventListener('loadedmetadata', setAudioDuration);
+        const handleLoadedMetadata = () => {
+            setDuration(audio.duration);
+        };
+        audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+
+        updateProgress();
 
         return () => {
-            audio.removeEventListener('timeupdate', updateProgress);
-            audio.removeEventListener('loadedmetadata', setAudioDuration);
-        }
-    }, [audioRef, song.id]); // Re-run effect when song ID changes
+            audio.removeEventListener('timeupdate', handleTimeUpdate);
+            audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+        };
+    }, [song.id, currentVersion]);
 
+    // Update volume
     useEffect(() => {
-        const audio = audioRef.current;
-        if (audio) {
-            audio.volume = isMuted ? 0 : volume;
+        if (audioRef.current) {
+            audioRef.current.volume = isMuted ? 0 : volume;
         }
-    }, [volume, isMuted, audioRef]);
+    }, [volume, isMuted]);
 
     const handleProgressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const audio = audioRef.current;
-        if (!audio) return;
-        const newTime = (Number(e.target.value) / 100) * duration;
-        audio.currentTime = newTime;
-        setProgress(Number(e.target.value));
+        const newTime = (Number(e.target.value) / 100) * (audioRef.current?.duration || 0);
+        if (audioRef.current) {
+            audioRef.current.currentTime = newTime;
+            setProgress(Number(e.target.value));
+        }
     }
 
     const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -78,27 +140,28 @@ const Player: React.FC<PlayerProps> = ({ song, isPlaying, onTogglePlayPause, aud
     }
 
     const toggleMute = () => {
-        if (isMuted) {
-            setIsMuted(false);
-            setVolume(previousVolume);
-        } else {
-            setIsMuted(true);
-            setPreviousVolume(volume);
-            setVolume(0);
+        if (audioRef.current) {
+            if (isMuted) {
+                setIsMuted(false);
+                audioRef.current.volume = previousVolume;
+                setVolume(previousVolume);
+            } else {
+                setIsMuted(true);
+                setPreviousVolume(volume);
+                audioRef.current.volume = 0;
+            }
         }
     }
 
     const skipBackward = () => {
-        const audio = audioRef.current;
-        if (audio) {
-            audio.currentTime = Math.max(0, audio.currentTime - 10);
+        if (audioRef.current) {
+            audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime - 10);
         }
     }
 
     const skipForward = () => {
-        const audio = audioRef.current;
-        if (audio) {
-            audio.currentTime = Math.min(duration, audio.currentTime + 10);
+        if (audioRef.current) {
+            audioRef.current.currentTime = Math.min(audioRef.current.duration, audioRef.current.currentTime + 10);
         }
     }
 
@@ -107,33 +170,41 @@ const Player: React.FC<PlayerProps> = ({ song, isPlaying, onTogglePlayPause, aud
       {isExpanded && (
         <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex flex-col animate-slide-up">
           <div className="flex justify-center pt-8">
-            <button onClick={onToggleExpanded} className="text-white hover:text-spotify-gray-100 transition-colors">
+            <button
+              type="button"
+              onClick={onToggleExpanded}
+              className="text-white hover:text-spotify-gray-100 transition-colors"
+              aria-label="Collapse player"
+              title="Collapse player"
+            >
               <ChevronDownIcon size={32} />
             </button>
           </div>
           <div className="flex-1 flex flex-col items-center justify-center px-4">
-            <h2 className="text-2xl font-bold text-white mb-8">Now Playing</h2>
-            <img src={song.coverArtUrl} alt={song.title} className="w-64 h-64 rounded-lg shadow-2xl mb-8" />
+            <h2 className="text-2xl font-bold text-white mb-12">Now Playing</h2>
+            <div className="my-12">
+              <AudioVisualizer analyser={analyser} isPlaying={isPlaying} coverArtUrl={song.coverArtUrl} />
+            </div>
             <h3 className="text-xl font-semibold text-white mb-2">{song.title}</h3>
-            <p className="text-spotify-gray-100 mb-8">{song.artistStyle}</p>
+            <p className="text-spotify-gray-100 mb-12">{song.artistStyle}</p>
             <div className="w-full max-w-md">
               <div className="flex items-center justify-center space-x-4 mb-4">
                 {hasPreviousSong && (
-                  <button onClick={onPreviousSong} className="text-white hover:text-spotify-gray-100 transition-colors">
+                  <button onClick={onPreviousSong} className="text-white hover:text-spotify-gray-100 transition-colors" aria-label="Previous song" title="Previous Song">
                     <SkipBackIcon size={32} />
                   </button>
                 )}
-                <button onClick={skipBackward} className="text-white hover:text-spotify-gray-100 transition-colors">
+                <button onClick={skipBackward} className="text-white hover:text-spotify-gray-100 transition-colors" aria-label="Skip backward 10 seconds" title="Skip backward 10 seconds">
                   <SkipBackIcon size={24} />
                 </button>
-                <button onClick={onTogglePlayPause} className="bg-spotify-green text-black rounded-full p-4 hover:scale-105 transition-all">
+                <button onClick={onTogglePlayPause} className="bg-spotify-green text-black rounded-full p-4 hover:scale-105 transition-all" aria-label={isPlaying ? "Pause" : "Play"} title={isPlaying ? "Pause" : "Play"}>
                   {isPlaying ? <PauseIcon size={32} /> : <PlayIcon size={32} />}
                 </button>
-                <button onClick={skipForward} className="text-white hover:text-spotify-gray-100 transition-colors">
+                <button onClick={skipForward} className="text-white hover:text-spotify-gray-100 transition-colors" aria-label="Skip forward 10 seconds" title="Skip forward 10 seconds">
                   <SkipForwardIcon size={24} />
                 </button>
                 {hasNextSong && (
-                  <button onClick={onNextSong} className="text-white hover:text-spotify-gray-100 transition-colors">
+                  <button onClick={onNextSong} className="text-white hover:text-spotify-gray-100 transition-colors" aria-label="Next song" title="Next Song">
                     <SkipForwardIcon size={32} />
                   </button>
                 )}
@@ -143,6 +214,8 @@ const Player: React.FC<PlayerProps> = ({ song, isPlaying, onTogglePlayPause, aud
                   <button
                     onClick={() => setCurrentVersion(currentVersion === 'primary' ? 'secondary' : 'primary')}
                     className="bg-spotify-gray-300 text-white rounded-full p-2 hover:bg-spotify-gray-200 transition-all duration-200 hover:scale-105"
+                    aria-label={`Switch to ${currentVersion === 'primary' ? 'Secondary' : 'Primary'} Version`}
+                    title={`Switch to ${currentVersion === 'primary' ? 'Secondary' : 'Primary'} Version`}
                   >
                     {currentVersion === 'primary' ? '2' : '1'}
                   </button>
@@ -152,6 +225,8 @@ const Player: React.FC<PlayerProps> = ({ song, isPlaying, onTogglePlayPause, aud
                 <span className="text-white">{formatTime(currentTime)}</span>
                 <input
                   type="range"
+                  aria-label="Seek song progress"
+                  title="Seek song progress"
                   min="0"
                   max="100"
                   value={progress}
@@ -167,6 +242,8 @@ const Player: React.FC<PlayerProps> = ({ song, isPlaying, onTogglePlayPause, aud
                 </button>
                 <input
                   type="range"
+                  aria-label="Volume control"
+                  title="Volume control"
                   min="0"
                   max="100"
                   value={isMuted ? 0 : volume * 100}
@@ -180,7 +257,7 @@ const Player: React.FC<PlayerProps> = ({ song, isPlaying, onTogglePlayPause, aud
         </div>
       )}
       <footer className="bg-gradient-to-r from-spotify-gray-500 to-spotify-gray-400 h-[90px] p-2 sm:p-4 flex items-center justify-between border-t border-spotify-gray-300 shadow-lg animate-slide-up">
-        <audio ref={audioRef} src={currentVersion === 'primary' ? song.songUrl : song.secondarySongUrl || song.songUrl} key={`${song.id}-${currentVersion}`} onEnded={onTogglePlayPause} />
+      <audio key={`${song.id}-${currentVersion}`} ref={audioRef} src={currentVersion === 'primary' ? song.songUrl : song.secondarySongUrl || song.songUrl} crossOrigin="anonymous" preload="auto" style={{ position: 'absolute', left: '-9999px', top: '-9999px' }} />
       <div className="flex items-center space-x-2 sm:space-x-4 w-1/3 sm:w-1/4">
         <img src={song.coverArtUrl} alt={song.title} className="w-10 h-10 sm:w-14 sm:h-14 rounded-md flex-shrink-0 shadow-md cursor-pointer" onClick={onToggleExpanded} />
         <div className="overflow-hidden">
@@ -234,6 +311,8 @@ const Player: React.FC<PlayerProps> = ({ song, isPlaying, onTogglePlayPause, aud
             <span className="text-xs text-spotify-gray-100 w-8 text-center">{formatTime(currentTime)}</span>
             <input
                 type="range"
+                aria-label="Seek song progress"
+                title="Seek song progress"
                 min="0"
                 max="100"
                 value={progress}
@@ -253,6 +332,8 @@ const Player: React.FC<PlayerProps> = ({ song, isPlaying, onTogglePlayPause, aud
         </button>
         <input
           type="range"
+          aria-label="Volume control"
+          title="Volume control"
           min="0"
           max="100"
           value={isMuted ? 0 : volume * 100}

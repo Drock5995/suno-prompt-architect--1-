@@ -1,10 +1,11 @@
- import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Song, View, PublicView, Session } from './types';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import PromptGenerator from './components/PromptGenerator';
 import SongLibrary from './components/SongLibrary';
 import SongUploader from './components/SongUploader';
+
 import Player from './components/Player';
 import Auth from './components/Auth';
 import SettingsModal from './components/SettingsModal';
@@ -29,6 +30,7 @@ const App: React.FC = () => {
   const [isAdminPublicMode, setIsAdminPublicMode] = useState<boolean>(false);
   const [isPlayerExpanded, setIsPlayerExpanded] = useState<boolean>(false);
   const audioRef = useRef<HTMLAudioElement>(null);
+
 
   useEffect(() => {
     const getSession = async () => {
@@ -403,14 +405,6 @@ const App: React.FC = () => {
   }
 
 
-  useEffect(() => {
-    if (!audioRef.current) return;
-    if (isPlaying && currentSong) {
-      audioRef.current.play().catch(e => console.error("Error playing audio:", e));
-    } else {
-      audioRef.current.pause();
-    }
-  }, [isPlaying, currentSong]);
 
   const renderContent = () => {
     if (isAdminPublicMode) {
